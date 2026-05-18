@@ -1,0 +1,13 @@
+{
+  "name": "engravida",
+  "version": "1.0.0",
+  "main": "index.js",
+  "private": true,
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "scripts": {
+    "dev": "node index.js"
+  }
+}
