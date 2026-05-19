@@ -1,5 +1,5 @@
 import { env } from "../config/env.js";
-import { runFollowups } from "../services/followupService.js";
+import { runFollowups, sendManualFollowups } from "../services/followupService.js";
 
 export async function followupRoute(req, res) {
     const secret = req.query.secret || req.headers["x-cron-secret"];
@@ -13,6 +13,24 @@ export async function followupRoute(req, res) {
 
     try {
         const result = await runFollowups();
+
+        return res.json({
+            ok: true,
+            ...result,
+        });
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            ok: false,
+            error: error.message,
+        });
+    }
+}
+
+export async function sendManualFollowupRoute(req, res) {
+    try {
+        const result = await sendManualFollowups(req.body.phones || []);
 
         return res.json({
             ok: true,

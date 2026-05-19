@@ -1,7 +1,8 @@
 import express from "express";
 import { env } from "./config/env.js";
-import { followupRoute } from "./routes/followupRoute.js";
+import { followupRoute, sendManualFollowupRoute } from "./routes/followupRoute.js";
 import { getFollowupState } from "./clients/jsonBinClient.js";
+import { normalizeFollowupState } from "./services/followupService.js";
 
 const app = express();
 
@@ -15,22 +16,34 @@ app.get("/", (req, res) => {
 });
 
 app.get("/followup", async (req, res) => {
-    const followups = await getFollowupState();
+    const state = normalizeFollowupState(await getFollowupState());
 
-    const items = Object.entries(followups)
+    const items = Object.entries(state.queue)
         .map(([phone, data]) => ({
             phone,
             ...data,
         }))
-        .sort((a, b) => new Date(b.sentAt || 0) - new Date(a.sentAt || 0));
+        .sort((a, b) => new Date(b.storageDate || b.queuedAt || 0) - new Date(a.updatedAt || a.queuedAt || 0));
+
+    const queuedCount = items.filter((item) => item.status === "queued").length;
+    const sentCount = items.filter((item) => item.status === "sent").length;
 
     const rows = items.map((item) => `
         <tr>
-            <td>${item.phone || ""}</td>
-            <td>${item.ticketId || ""}</td>
-            <td>${item.attempts || 0}</td>
-            <td>${item.sentAt ? new Date(item.sentAt).toLocaleString("pt-BR") : ""}</td>
-            <td>${item.message || ""}</td>
+            <td>
+                ${item.status === "queued" ? `<input type="checkbox" name="phone" value="${item.phone}" />` : ""}
+            </td>
+            <td><span class="phone">${item.phone || ""}</span></td>
+            <td><span class="ticket">${parseInt(item.ticketId) || ""}</span></td>
+            <td>
+                <span class="status ${item.status === "sent" ? "sent" : "queued"}" style="white-space: nowrap">
+                    ${item.status === "sent" ? "enviado" : "na fila"}
+                </span>
+            </td>
+            <td><span class="attempts">${item.attempts || 0}</span></td>
+            <td><span class="date">${item.storageDate ? new Date(item.storageDate).toLocaleDateString("pt-BR") : ""}</span></td>
+            <td><span class="date">${item.sentAt ? new Date(item.sentAt).toLocaleString("pt-BR") : "-"}</span></td>
+            <td><div class="message">${item.message || ""}</div></td>
         </tr>
     `).join("");
 
@@ -78,17 +91,48 @@ app.get("/followup", async (req, res) => {
             font-size: 14px;
         }
 
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #ecfdf3;
-            color: #027a48;
-            border: 1px solid #abefc6;
-            padding: 8px 12px;
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.badge.active {
+    background: #ecfdf3;
+    color: #027a48;
+    border: 1px solid #abefc6;
+}
+
+.badge.inactive {
+    background: #fef2f2;
+    color: #b42318;
+    border: 1px solid #fecaca;
+}
+        .readme-button,
+        .send-button {
+            border: 0;
+            cursor: pointer;
+            text-decoration: none;
+            background: #111827;
+            color: white;
+            padding: 9px 14px;
             border-radius: 999px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
+        }
+
+        .readme-button:hover,
+        .send-button:hover {
+            background: #374151;
+        }
+
+        .send-button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .grid {
@@ -132,6 +176,7 @@ app.get("/followup", async (req, res) => {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 16px;
         }
 
         .card-header h2 {
@@ -190,8 +235,25 @@ app.get("/followup", async (req, res) => {
             height: 28px;
             border-radius: 999px;
             background: #eef2ff;
-            color: #3730a3;
             font-weight: 700;
+        }
+
+        .status {
+            display: inline-flex;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status.queued {
+            background: rgba(194,142,12,0.15);
+            color: #a2780e;
+        }
+
+        .status.sent {
+            background: rgba(36,194,12,0.15);
+            color: #349110;
         }
 
         .date {
@@ -210,18 +272,8 @@ app.get("/followup", async (req, res) => {
             padding: 40px;
             color: #6b7280;
         }
-        .readme-button {
-            text-decoration: none;
-            background: #111827;
-            color: white;
-            padding: 9px 14px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 700;
-        }
-        
-        .readme-button:hover {
-            background: #374151;
+        th{
+            white-space: nowrap;
         }
 
         @media (max-width: 900px) {
@@ -242,7 +294,7 @@ app.get("/followup", async (req, res) => {
             }
 
             table {
-                min-width: 900px;
+                min-width: 1100px;
             }
         }
     </style>
@@ -252,48 +304,54 @@ app.get("/followup", async (req, res) => {
         <section class="header">
             <div class="title">
                 <h1>Dashboard de Follow-ups</h1>
-                <p>Monitoramento dos contatos que já receberam follow-up automático.</p>
+                <p>Contatos na fila e envios manuais de follow-up.</p>
             </div>
+
             <div style="display: flex; gap: 12px; align-items: center;">
                 <a class="readme-button" href="https://github.com/metrix0/EngravidaFollowUpBlipIntegration" target="_blank">📘 Open README</a>
-            
-                <div class="badge">
-                    ● Sistema ativo
+
+                <div class="badge ${state.automatic_sending ? "active" : "inactive"}">
+                    ● ${state.automatic_sending ? "Envio automático ativo" : "Envio automático desativado"}
                 </div>
             </div>
         </section>
 
         <section class="grid">
             <div class="metric">
-                <span>Total enviados</span>
-                <strong>${items.length}</strong>
+                <span>Na fila</span>
+                <strong>${queuedCount}</strong>
             </div>
 
             <div class="metric">
-                <span>Último envio</span>
-                <strong>${items[0]?.sentAt ? new Date(items[0].sentAt).toLocaleDateString("pt-BR") : "-"}</strong>
+                <span>Enviados</span>
+                <strong>${sentCount}</strong>
             </div>
 
             <div class="metric">
-                <span>Base</span>
-                <strong>JSONBin</strong>
+                <span>Modo</span>
+                <strong>${state.automatic_sending ? "Auto" : "Manual"}</strong>
             </div>
         </section>
 
         <section class="card">
             <div class="card-header">
                 <div>
-                    <h2>Histórico de envios</h2>
-                    <span>Ordenado do mais recente para o mais antigo</span>
+                    <h2>Fila de follow-up</h2>
+                    <span>Selecione contatos na fila para enviar manualmente</span>
                 </div>
+
+<button class="send-button" id="sendButton" onclick="sendSelected()" disabled>Enviar selecionados</button>
             </div>
 
             <table>
                 <thead>
                     <tr>
+                        <th></th>
                         <th>Telefone</th>
                         <th>Ticket</th>
+                        <th>Status</th>
                         <th>Tentativas</th>
+                        <th>Finalizado em</th>
                         <th>Enviado em</th>
                         <th>Mensagem</th>
                     </tr>
@@ -302,23 +360,71 @@ app.get("/followup", async (req, res) => {
                     ${
         rows ||
         `<tr>
-                            <td class="empty" colspan="5">Nenhum follow-up enviado ainda.</td>
+                            <td class="empty" colspan="8">Nenhum contato na fila.</td>
                         </tr>`
     }
                 </tbody>
             </table>
         </section>
     </main>
+
+    <script>
+        function updateSendButton() {
+            const selected = document.querySelectorAll('input[name="phone"]:checked').length;
+            document.getElementById("sendButton").disabled = selected === 0;
+        }
+        
+        document.addEventListener("change", (event) => {
+            if (event.target.name === "phone") {
+                updateSendButton();
+            }
+        });
+        async function sendSelected() {
+            const phones = [...document.querySelectorAll('input[name="phone"]:checked')]
+                .map((input) => input.value);
+
+            if (phones.length === 0) {
+                alert("Selecione pelo menos um contato.");
+                return;
+            }
+
+            const button = document.getElementById("sendButton");
+            button.disabled = true;
+            button.textContent = "Enviando...";
+
+            const response = await fetch("/api/followup/send", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ phones }),
+            });
+
+            const result = await response.json();
+
+            if (!result.ok) {
+                alert(result.error || "Erro ao enviar.");
+                button.disabled = false;
+                button.textContent = "Enviar selecionados";
+                return;
+            }
+
+            alert("Envios concluídos: " + result.sent);
+            window.location.reload();
+        }
+    </script>
 </body>
 </html>
 `);
 });
+
 app.get("/readme", (req, res) => {
-    res.sendFile("README.md", { root: process.cwd() });
+    res.redirect("https://github.com/metrix0/EngravidaFollowUpBlipIntegration");
 });
 
 app.get("/api/followup", followupRoute);
 app.post("/api/followup", followupRoute);
+app.post("/api/followup/send", sendManualFollowupRoute);
 
 app.listen(env.PORT, () => {
     console.log(`Server running on port ${env.PORT}`);

@@ -1,5 +1,4 @@
 import { getSheetTickets } from "../clients/googleSheetsClient.js";
-import { getFollowupState } from "../clients/jsonBinClient.js";
 import { normalize } from "../utils/normalize.js";
 import { daysAgo, isAfterDate } from "../utils/date.js";
 import { env } from "../config/env.js";
@@ -30,7 +29,6 @@ function getContactIdentity(ticket) {
 
 export async function getTicketsToFollowUp() {
     const tickets = await getSheetTickets();
-    const followups = await getFollowupState();
 
     const result = [];
 
@@ -48,13 +46,10 @@ export async function getTicketsToFollowUp() {
             continue;
         }
 
-        const followup = followups[contactIdentity];
-
         const shouldFollowUp =
             ticketId &&
             contactIdentity &&
             daysAgo(storageDate) === env.FOLLOWUP_AFTER_DAYS &&
-            (followup?.attempts || 0) < 1 &&
             hasSchedulingTag(tags) &&
             !isAlreadyScheduled(tags);
 
@@ -64,11 +59,10 @@ export async function getTicketsToFollowUp() {
                 _ticketId: ticketId,
                 _contactIdentity: contactIdentity,
                 _storageDate: storageDate,
-                _tags: tags
+                _tags: tags,
             });
         }
     }
-
 
     return result;
 }
