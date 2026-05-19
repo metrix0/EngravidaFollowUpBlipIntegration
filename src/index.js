@@ -210,6 +210,19 @@ app.get("/followup", async (req, res) => {
             padding: 40px;
             color: #6b7280;
         }
+        .readme-button {
+            text-decoration: none;
+            background: #111827;
+            color: white;
+            padding: 9px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        
+        .readme-button:hover {
+            background: #374151;
+        }
 
         @media (max-width: 900px) {
             .page {
@@ -241,9 +254,12 @@ app.get("/followup", async (req, res) => {
                 <h1>Dashboard de Follow-ups</h1>
                 <p>Monitoramento dos contatos que já receberam follow-up automático.</p>
             </div>
-
-            <div class="badge">
-                ● Sistema ativo
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a class="readme-button" href="https://github.com/metrix0/EngravidaFollowUpBlipIntegration" target="_blank">📘 Open README</a>
+            
+                <div class="badge">
+                    ● Sistema ativo
+                </div>
             </div>
         </section>
 
@@ -297,6 +313,10 @@ app.get("/followup", async (req, res) => {
 </html>
 `);
 });
+app.get("/readme", (req, res) => {
+    res.sendFile("README.md", { root: process.cwd() });
+});
+
 app.get("/api/followup", followupRoute);
 app.post("/api/followup", followupRoute);
 
