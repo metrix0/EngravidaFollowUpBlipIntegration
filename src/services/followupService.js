@@ -42,7 +42,6 @@ export async function runFollowups() {
 
             followups[phone] = {
                 ticketId,
-                phone,
                 attempts: (followups[phone]?.attempts || 0) + 1,
                 sentAt: new Date().toISOString(),
                 message,
