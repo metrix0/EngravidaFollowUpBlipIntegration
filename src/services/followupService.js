@@ -31,17 +31,21 @@ export async function runFollowups() {
         });
 
         try {
+            const message = buildFollowupMessage(ticket);
+
             await sendBlipMessage({
                 to,
-                content: buildFollowupMessage(ticket),
+                content: message,
             });
 
             const phone = ticket._contactIdentity;
 
             followups[phone] = {
                 ticketId,
+                phone,
                 attempts: (followups[phone]?.attempts || 0) + 1,
                 sentAt: new Date().toISOString(),
+                message,
             };
 
             results.push({
