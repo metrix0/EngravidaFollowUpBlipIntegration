@@ -22,7 +22,7 @@ export async function runFollowups() {
     // for (const ticket of tickets) {
         const ticketId = ticket._ticketId;
         //const to = buildWhatsappIdentity(ticket._contactIdentity);
-        const to = "5511988576886@wa.gw.msging.net";
+        const to = "5519988760900@wa.gw.msging.net";
 
         console.log({
             contract: process.env.BLIP_CONTRACT_ID,
