@@ -8,6 +8,11 @@
   "license": "ISC",
   "description": "",
   "scripts": {
-    "dev": "node index.js"
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.6.2"
   }
 }
