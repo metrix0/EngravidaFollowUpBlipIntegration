@@ -48,7 +48,7 @@ export async function getTicketsToFollowUp() {
             continue;
         }
 
-        const followup = followups[ticketId];
+        const followup = followups[contactIdentity];
 
         const shouldFollowUp =
             ticketId &&

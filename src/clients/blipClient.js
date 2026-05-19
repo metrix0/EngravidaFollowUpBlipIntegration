@@ -20,5 +20,11 @@ export async function sendBlipMessage({ to, content }) {
         throw new Error(`Blip send error: ${res.status} - ${await res.text()}`);
     }
 
-    return res.json().catch(() => null);
-}
+    const text = await res.text();
+
+    console.log("Blip response:", {
+        status: res.status,
+        body: text,
+    });
+
+    return text ? JSON.parse(text) : null;}

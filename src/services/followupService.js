@@ -3,11 +3,13 @@ import { sendBlipMessage } from "../clients/blipClient.js";
 import { getFollowupState, updateFollowupState } from "../clients/jsonBinClient.js";
 
 function buildWhatsappIdentity(contactIdentity) {
-    if (contactIdentity.includes("@")) {
-        return contactIdentity;
+    const identity = String(contactIdentity);
+
+    if (identity.includes("@")) {
+        return identity;
     }
 
-    return `${contactIdentity}@wa.gw.msging.net`;
+    return `${identity}@wa.gw.msging.net`;
 }
 
 export async function runFollowups() {
@@ -20,8 +22,13 @@ export async function runFollowups() {
     // for (const ticket of tickets) {
         const ticketId = ticket._ticketId;
         //const to = buildWhatsappIdentity(ticket._contactIdentity);
-        const to = buildWhatsappIdentity(5519988760900);
+        const to = "5511988576886@wa.gw.msging.net";
 
+        console.log({
+            contract: process.env.BLIP_CONTRACT_ID,
+            to,
+            content: buildFollowupMessage(ticket),
+        });
 
         try {
             await sendBlipMessage({
@@ -29,13 +36,12 @@ export async function runFollowups() {
                 content: buildFollowupMessage(ticket),
             });
 
-            followups[ticketId] = {
-                ticketId,
-                attempts: (followups[ticketId]?.attempts || 0) + 1,
-                sentAt: new Date().toISOString(),
-                storageDate: ticket._storageDate,
-                phone: ticket._contactIdentity,
+            const phone = ticket._contactIdentity;
 
+            followups[phone] = {
+                ticketId,
+                attempts: (followups[phone]?.attempts || 0) + 1,
+                sentAt: new Date().toISOString(),
             };
 
             results.push({
