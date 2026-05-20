@@ -1,5 +1,6 @@
 import { getTicketsToFollowUp } from "./ticketsService.js";
-import { sendBlipMessage } from "../clients/blipClient.js";
+import { sendBlipActiveMessage } from "../clients/blipClient.js";
+import { env } from "../config/env.js";
 import { getFollowupState, updateFollowupState } from "../clients/jsonBinClient.js";
 
 function buildWhatsappIdentity(contactIdentity) {
@@ -9,9 +10,7 @@ function buildWhatsappIdentity(contactIdentity) {
         return identity;
     }
 
-    // return `${identity}@wa.gw.msging.net`;
-    return `5519988760900@wa.gw.msging.net`;
-
+    return `${identity}@wa.gw.msging.net`;
 }
 
 function buildFollowupMessage(ticket) {
@@ -109,9 +108,10 @@ async function sendQueuedPhone(state, phone) {
 
     const to = buildWhatsappIdentity(phone);
 
-    await sendBlipMessage({
-        to,
-        content: item.message,
+    await sendBlipActiveMessage({
+        phone,
+        templateName: env.BLIP_ACTIVE_TEMPLATE,
+        params: {},
     });
 
     state.queue[phone] = {

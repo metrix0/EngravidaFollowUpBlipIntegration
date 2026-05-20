@@ -28,6 +28,12 @@ export const env = {
     BLIP_CONTRACT_ID: required("BLIP_CONTRACT_ID"),
     BLIP_KEY: required("BLIP_KEY"),
 
+    BLIP_ACTIVE_TEMPLATE: required("BLIP_ACTIVE_TEMPLATE"),
+    BLIP_ACTIVE_FLOW_ID: required("BLIP_ACTIVE_FLOW_ID"),
+    BLIP_ACTIVE_STATE_ID: required("BLIP_ACTIVE_STATE_ID"),
+
     FOLLOWUP_AFTER_DAYS: Number(process.env.FOLLOWUP_AFTER_DAYS || 9),
     IGNORE_BEFORE_DATE: process.env.IGNORE_BEFORE_DATE || "2026-05-16",
+
+    DASHBOARD_PASSWORD: required("DASHBOARD_PASSWORD")
 };
