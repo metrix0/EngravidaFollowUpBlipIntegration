@@ -1,7 +1,7 @@
 import express from "express";
 import { env } from "./config/env.js";
 import { followupRoute, sendManualFollowupRoute } from "./routes/followupRoute.js";
-import { getFollowupState } from "./clients/jsonBinClient.js";
+import { getFollowupState } from "./clients/supabaseClient.js";
 import { normalizeFollowupState } from "./services/followupService.js";
 import { renderFollowupPage } from "./views/followupPage.js";
 import { renderLoginPage } from "./views/loginPage.js";
