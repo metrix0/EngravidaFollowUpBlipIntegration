@@ -82,7 +82,12 @@ async function sendQueuedPhone(state, phone) {
     await sendBlipActiveMessage({
         phone,
         templateName: env.BLIP_ACTIVE_TEMPLATE,
-        params: {},
+        params: {
+            "1": "Teste",
+            "2": "Teste",
+            "3": "Teste",
+            "4": "Teste",
+        },
     });
 
     await markFollowupAsSent({ phone });

@@ -27,40 +27,47 @@ export async function sendBlipMessage({ to, content }) {
         body: text,
     });
 
-    return text ? JSON.parse(text) : null;}
+    return text ? JSON.parse(text) : null;
+}
 
 export async function sendBlipActiveMessage({ phone, templateName, params = {} }) {
+    const payload = {
+        id: crypto.randomUUID(),
+        to: "postmaster@activecampaign.msging.net",
+        method: "set",
+        uri: "/campaign/full",
+        type: "application/vnd.iris.activecampaign.full-campaign+json",
+        resource: {
+            campaign: {
+                name: `followup-${crypto.randomUUID()}`,
+                campaignType: "Individual",
+                flowId: env.BLIP_ACTIVE_FLOW_ID,
+                stateId: env.BLIP_ACTIVE_STATE_ID,
+                masterstate: "fluxocampanhaativa@msging.net",
+                channelType: "WhatsApp",
+                sourceApplication: "API"
+            },
+            audience: {
+                recipient: `+${String(phone).replace(/\D/g, "")}`,
+                messageParams: params
+            },
+            message: {
+                messageTemplate: templateName,
+                messageParams: Object.keys(params),
+                channelType: "WhatsApp"
+            }
+        }
+    };
+
+    console.log("Blip active payload:", JSON.stringify(payload, null, 2));
+
     const res = await fetch(`https://${env.BLIP_CONTRACT_ID}.http.msging.net/commands`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Key ${env.BLIP_KEY}`,
         },
-        body: JSON.stringify({
-            id: crypto.randomUUID(),
-            to: "postmaster@activecampaign.msging.net",
-            method: "set",
-            uri: "/campaign/full",
-            type: "application/vnd.iris.activecampaign.full-campaign+json",
-            resource: {
-                campaign: {
-                    name: crypto.randomUUID(),
-                    campaignType: "Individual",
-                    masterstate: "fluxocampanhaativa@msging.net",
-                    flowId: env.BLIP_ACTIVE_FLOW_ID,
-                    stateId: env.BLIP_ACTIVE_STATE_ID,
-                },
-                audience: {
-                    recipient: `+${String(phone).replace(/\D/g, "")}`,
-                    messageParams: params,
-                },
-                message: {
-                    messageTemplate: templateName,
-                    messageParams: Object.keys(params),
-                    channelType: "WhatsApp",
-                },
-            },
-        }),
+        body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -74,5 +81,11 @@ export async function sendBlipActiveMessage({ phone, templateName, params = {} }
         body: text,
     });
 
-    return text ? JSON.parse(text) : null;
+    const data = text ? JSON.parse(text) : null;
+
+    if (data?.status === "failure") {
+        throw new Error(`Blip active campaign failed: ${JSON.stringify(data.reason)}`);
+    }
+
+    return data;
 }

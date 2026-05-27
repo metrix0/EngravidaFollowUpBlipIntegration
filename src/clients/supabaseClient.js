@@ -15,7 +15,9 @@ const supabase = createClient(
 export async function getFollowupState() {
     const { data, error } = await supabase
         .from("followups")
-        .select("*");
+        .select("*")
+        .order("storage_date", { ascending: false })
+        .range(0, 9999);
 
     if (error) {
         throw new Error(`Supabase read error: ${error.message}`);
